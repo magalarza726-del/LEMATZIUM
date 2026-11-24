@@ -33,6 +33,7 @@ $env:PYTHONHOME = $runtime
 $env:PYTHONNOUSERSITE = '1'
 $env:PYTHONPATH = ''
 $env:PYTHONDONTWRITEBYTECODE = '1'
+$env:PYTHONUTF8 = '1'
 $env:LEMATZIUM_PYTHON = $python
 $env:LEMATZIUM_INSTALLED = '1'
 # Avoid developer shortcut creation in the installed edition; keep module/theme logic unchanged.
@@ -47,14 +48,20 @@ $code = [IO.File]::ReadAllText($launchRuntime)
 $code = $code.Replace('getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)', 'getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | (getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.environ.get("LEMATZIUM_INSTALLED") else 0)')
 [IO.File]::WriteAllText($launchRuntime,$code,(New-Object Text.UTF8Encoding($false)))
 # Test the private interpreter and original analysis modules.
-Run-Checked $python @('-c','import sys, pathlib, tkinter, numpy, pandas, matplotlib, docx, pypdf, openpyxl, pyxlsb, xlrd, PIL, PySide6, google.genai, sounddevice, pygame; assert pathlib.Path(sys.prefix).resolve() == pathlib.Path(sys.executable).resolve().parent; r=tkinter.Tk(); r.withdraw(); r.update(); r.destroy(); print("Private runtime OK")')
+@'
+import sys, pathlib, tkinter, numpy, pandas, matplotlib, docx, pypdf, openpyxl, pyxlsb, xlrd, PIL, PySide6, google.genai, sounddevice, pygame; assert pathlib.Path(sys.prefix).resolve() == pathlib.Path(sys.executable).resolve().parent; r=tkinter.Tk(); r.withdraw(); r.update(); r.destroy(); print("Private runtime OK")
+'@ | & $python -
+if ($LASTEXITCODE -ne 0) { throw 'Private runtime smoke test failed' }
 Push-Location $app
 try {
     Run-Checked $python @((Join-Path $source 'tools\validate_refactor.py'))
     Run-Checked $python @('modules\module_tensile_unified\validate_unified_module.py')
     Run-Checked $python @('modules\module_4_traccion_plasticos\validate_traccion_plasticos.py')
     Run-Checked $python @('modules\module_3_ai_assistant\validate_ai_assistant.py')
-    Run-Checked $python @('-c','import sys; sys.path[:0]=["launcher","modules","modules/module_3_ai_assistant","SECRETO_LEMATZIUM"]; import lematzium_suite_launcher, uncertainty_editor, lematzium_ai_assistant.ui, lematzium_minijuego_retro.app; print("Hub, uncertainty, assistant and game import OK")')
+    @'
+import sys; sys.path[:0]=["launcher","modules","modules/module_3_ai_assistant","SECRETO_LEMATZIUM"]; import lematzium_suite_launcher, uncertainty_editor, lematzium_ai_assistant.ui, lematzium_minijuego_retro.app; print("Hub, uncertainty, assistant and game import OK")
+'@ | & $python -
+    if ($LASTEXITCODE -ne 0) { throw 'Application import smoke test failed' }
 } finally { Pop-Location }
 Get-ChildItem $app -Directory -Recurse -Filter '__pycache__' | Sort-Object FullName -Descending | Remove-Item -Recurse -Force
 # Compile a small native Windows GUI bootstrapper. The original Python source stays intact.
