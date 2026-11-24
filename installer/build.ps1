@@ -50,7 +50,7 @@ $code = $code.Replace('getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)', 'get
 Run-Checked $python @('-c','import sys, pathlib, tkinter, numpy, pandas, matplotlib, docx, pypdf, openpyxl, pyxlsb, xlrd, PIL, PySide6, google.genai, sounddevice, pygame; assert pathlib.Path(sys.prefix).resolve() == pathlib.Path(sys.executable).resolve().parent; r=tkinter.Tk(); r.withdraw(); r.update(); r.destroy(); print("Private runtime OK")')
 Push-Location $app
 try {
-    Run-Checked $python @('tools\validate_refactor.py')
+    Run-Checked $python @((Join-Path $source 'tools\validate_refactor.py'))
     Run-Checked $python @('modules\module_tensile_unified\validate_unified_module.py')
     Run-Checked $python @('modules\module_4_traccion_plasticos\validate_traccion_plasticos.py')
     Run-Checked $python @('modules\module_3_ai_assistant\validate_ai_assistant.py')
